@@ -33,8 +33,9 @@ type (
 	XMessage         = redis.XMessage
 	XStream          = redis.XStream
 
-	ProduceMessageContentOption interface {
-		apply(msg *MessageContent) error
+	ProduceMessageOption interface {
+		applyContent(msg *MessageContent) error
+		applyID(id string) string
 	}
 )
 

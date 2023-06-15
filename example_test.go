@@ -79,7 +79,7 @@ func Example() {
 			}
 
 			for _, message := range publishMessages {
-				reply, err := p.Write("gotestStream", redis.StreamAsteriskID, message)
+				reply, err := p.Write("gotestStream", message)
 				if err != nil {
 					panic(err)
 				}

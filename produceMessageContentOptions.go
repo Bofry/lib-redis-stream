@@ -8,15 +8,19 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 )
 
-var _ ProduceMessageContentOption = new(ProduceMessageContentOptionProc)
+var _ ProduceMessageOption = new(ProduceMessageContentOption)
 
-type ProduceMessageContentOptionProc func(msg *MessageContent) error
+type ProduceMessageContentOption func(msg *MessageContent) error
 
-func (proc ProduceMessageContentOptionProc) apply(msg *MessageContent) error {
+func (proc ProduceMessageContentOption) applyContent(msg *MessageContent) error {
 	return proc(msg)
 }
 
-func WithTracePropagation(ctx context.Context, propagator propagation.TextMapPropagator) ProduceMessageContentOptionProc {
+func (proc ProduceMessageContentOption) applyID(id string) string {
+	return id
+}
+
+func WithTracePropagation(ctx context.Context, propagator propagation.TextMapPropagator) ProduceMessageContentOption {
 	return func(msg *MessageContent) error {
 		carrier := tracing.NewMessageStateCarrier(&msg.State)
 		if propagator == nil {

@@ -34,7 +34,7 @@ func (p *Producer) Handle() redis.UniversalClient {
 	return p.handle
 }
 
-func (p *Producer) WriteContent(stream string, id string, msg *MessageContent, opts ...ProduceMessageContentOption) (string, error) {
+func (p *Producer) WriteContent(stream string, msg *MessageContent, opts ...ProduceMessageOption) (string, error) {
 	if p.disposed {
 		return "", fmt.Errorf("the Producer has been disposed")
 	}
@@ -42,20 +42,27 @@ func (p *Producer) WriteContent(stream string, id string, msg *MessageContent, o
 		p.logger.Panic("the Producer haven't be initialized yet")
 	}
 
+	id := StreamAsteriskID
+
 	// apply options
 	for _, opt := range opts {
-		err := opt.apply(msg)
-		if err != nil {
-			return "", err
+		switch opt.(type) {
+		case ProduceMessageContentOption:
+			err := opt.applyContent(msg)
+			if err != nil {
+				return "", err
+			}
+		case ProduceMessageIDOption:
+			id = opt.applyID(id)
 		}
 	}
 
 	var values map[string]interface{}
 	msg.WriteTo(values)
-	return p.Write(stream, id, values)
+	return p.internalWrite(stream, id, values)
 }
 
-func (p *Producer) Write(stream string, id string, values map[string]interface{}) (string, error) {
+func (p *Producer) Write(stream string, values map[string]interface{}, opts ...ProduceMessageOption) (string, error) {
 	if p.disposed {
 		return "", fmt.Errorf("the Producer has been disposed")
 	}
@@ -63,20 +70,19 @@ func (p *Producer) Write(stream string, id string, values map[string]interface{}
 		p.logger.Panic("the Producer haven't be initialized yet")
 	}
 
-	p.wg.Add(1)
-	defer p.wg.Done()
+	id := StreamAsteriskID
 
-	reply, err := p.handle.XAdd(&redis.XAddArgs{
-		Stream: stream,
-		ID:     id,
-		Values: values,
-	}).Result()
-	if err != nil {
-		if err != redis.Nil {
-			return "", err
+	// apply options
+	for _, opt := range opts {
+		switch opt.(type) {
+		case ProduceMessageIDOption:
+			id = opt.applyID(id)
 		}
 	}
-	return reply, nil
+
+	fmt.Printf("ID: %s\n", id)
+
+	return p.internalWrite(stream, id, values)
 }
 
 func (p *Producer) Close() {
@@ -119,4 +125,21 @@ func (p *Producer) configureLogger(config *ProducerConfig) {
 		return
 	}
 	p.logger = defaultLogger
+}
+
+func (p *Producer) internalWrite(stream string, id string, values map[string]interface{}) (string, error) {
+	p.wg.Add(1)
+	defer p.wg.Done()
+
+	reply, err := p.handle.XAdd(&redis.XAddArgs{
+		Stream: stream,
+		ID:     id,
+		Values: values,
+	}).Result()
+	if err != nil {
+		if err != redis.Nil {
+			return "", err
+		}
+	}
+	return reply, nil
 }

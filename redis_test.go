@@ -201,7 +201,7 @@ func TestProducer_Write(t *testing.T) {
 
 			for stream, messages := range messageTable {
 				for _, message := range messages {
-					reply, err := p.Write(stream, redis.StreamAsteriskID, message)
+					reply, err := p.Write(stream, message)
 					if err != nil {
 						t.Fatal(err)
 					}
