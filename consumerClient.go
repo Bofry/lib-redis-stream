@@ -1,4 +1,4 @@
-package internal
+package redis
 
 import (
 	"fmt"
@@ -8,12 +8,12 @@ import (
 	redis "github.com/go-redis/redis/v7"
 )
 
-type Consumer struct {
+type ConsumerClient struct {
 	Group       string
 	Name        string
 	RedisOption *redis.UniversalOptions
 
-	handle UniversalClient
+	client UniversalClient
 	wg     sync.WaitGroup
 
 	streamKeys       []string
@@ -24,11 +24,7 @@ type Consumer struct {
 	disposed bool
 }
 
-func (c *Consumer) Handle() UniversalClient {
-	return c.handle
-}
-
-func (c *Consumer) Subscribe(streams ...StreamOffset) error {
+func (c *ConsumerClient) subscribe(streams ...StreamOffset) error {
 	if len(streams) == 0 {
 		return fmt.Errorf("specified streams is empty")
 	}
@@ -81,7 +77,7 @@ func (c *Consumer) Subscribe(streams ...StreamOffset) error {
 	return nil
 }
 
-func (c *Consumer) Claim(minIdleTime time.Duration, count int64, pendingFetchingSize int64) ([]redis.XStream, error) {
+func (c *ConsumerClient) claim(minIdleTime time.Duration, count int64, pendingFetchingSize int64) ([]redis.XStream, error) {
 	if c.disposed {
 		return nil, fmt.Errorf("the Consumer has been disposed")
 	}
@@ -95,7 +91,7 @@ func (c *Consumer) Claim(minIdleTime time.Duration, count int64, pendingFetching
 	var resultStream []redis.XStream = make([]redis.XStream, 0, len(c.streamKeys))
 	for _, stream := range c.streamKeys {
 		// fetch all pending messages from specified redis stream key
-		pendingSet, err := c.handle.XPendingExt(&redis.XPendingExtArgs{
+		pendingSet, err := c.client.XPendingExt(&redis.XPendingExtArgs{
 			Stream: stream,
 			Group:  c.Group,
 			Start:  "-",
@@ -127,7 +123,7 @@ func (c *Consumer) Claim(minIdleTime time.Duration, count int64, pendingFetching
 			}
 
 			if len(pendingMessageIDs) > 0 {
-				claimMessages, err := c.handle.XClaim(&redis.XClaimArgs{
+				claimMessages, err := c.client.XClaim(&redis.XClaimArgs{
 					Stream:   stream,
 					Group:    c.Group,
 					Consumer: c.Name,
@@ -142,8 +138,7 @@ func (c *Consumer) Claim(minIdleTime time.Duration, count int64, pendingFetching
 
 				// clear invalid message IDs (ghost IDs)
 				if len(claimMessages) != len(pendingMessageIDs) {
-
-					Assert(
+					assertCompatibility(
 						len(claimMessages) < len(pendingMessageIDs),
 						"the XCLAIM messages must less or equal than the XPENDING messages")
 
@@ -158,7 +153,7 @@ func (c *Consumer) Claim(minIdleTime time.Duration, count int64, pendingFetching
 							nextClaimMessagesIndex int = 0
 						)
 
-						// Because
+						// NOTE: Because
 						//   1) the XCLAIM messages must less or equal than the XPENDING messages,
 						//   2) the XCLAIM messages might be missing part messages but it won't change sequence,
 						// we can check XCLAIM messages according to XPENDING messages sequence with their message ID.
@@ -195,7 +190,7 @@ func (c *Consumer) Claim(minIdleTime time.Duration, count int64, pendingFetching
 	return resultStream, nil
 }
 
-func (c *Consumer) Read(count int64, timeout time.Duration) ([]redis.XStream, error) {
+func (c *ConsumerClient) read(count int64, timeout time.Duration) ([]redis.XStream, error) {
 	if c.disposed {
 		return nil, fmt.Errorf("the Consumer has been disposed")
 	}
@@ -206,7 +201,7 @@ func (c *Consumer) Read(count int64, timeout time.Duration) ([]redis.XStream, er
 	c.wg.Add(1)
 	defer c.wg.Done()
 
-	messages, err := c.handle.XReadGroup(&redis.XReadGroupArgs{
+	messages, err := c.client.XReadGroup(&redis.XReadGroupArgs{
 		Group:    c.Group,
 		Consumer: c.Name,
 		Count:    count,
@@ -221,7 +216,7 @@ func (c *Consumer) Read(count int64, timeout time.Duration) ([]redis.XStream, er
 	return messages, nil
 }
 
-func (c *Consumer) Ack(key string, id ...string) (int64, error) {
+func (c *ConsumerClient) ack(key string, id ...string) (int64, error) {
 	if c.disposed {
 		return 0, fmt.Errorf("the Consumer has been disposed")
 	}
@@ -232,7 +227,7 @@ func (c *Consumer) Ack(key string, id ...string) (int64, error) {
 	c.wg.Add(1)
 	defer c.wg.Done()
 
-	reply, err := c.handle.XAck(key, c.Group, id...).Result()
+	reply, err := c.client.XAck(key, c.Group, id...).Result()
 	if err != nil {
 		if err != redis.Nil {
 			return 0, err
@@ -241,7 +236,7 @@ func (c *Consumer) Ack(key string, id ...string) (int64, error) {
 	return reply, nil
 }
 
-func (c *Consumer) Del(key string, id ...string) (int64, error) {
+func (c *ConsumerClient) del(key string, id ...string) (int64, error) {
 	if c.disposed {
 		return 0, fmt.Errorf("the Consumer has been disposed")
 	}
@@ -252,7 +247,7 @@ func (c *Consumer) Del(key string, id ...string) (int64, error) {
 	c.wg.Add(1)
 	defer c.wg.Done()
 
-	reply, err := c.handle.XDel(key, id...).Result()
+	reply, err := c.client.XDel(key, id...).Result()
 	if err != nil {
 		if err != redis.Nil {
 			return 0, err
@@ -261,7 +256,7 @@ func (c *Consumer) Del(key string, id ...string) (int64, error) {
 	return reply, nil
 }
 
-func (c *Consumer) Close() {
+func (c *ConsumerClient) close() {
 	if c.disposed {
 		return
 	}
@@ -275,24 +270,24 @@ func (c *Consumer) Close() {
 	}()
 
 	c.wg.Wait()
-	c.handle.Close()
+	c.client.Close()
 }
 
-func (c *Consumer) configRedisClient() error {
-	if c.handle == nil {
-		client, err := CreateRedisUniversalClient(c.RedisOption)
+func (c *ConsumerClient) configRedisClient() error {
+	if c.client == nil {
+		client, err := createRedisUniversalClient(c.RedisOption)
 		if err != nil {
 			return err
 		}
 
-		c.handle = client
+		c.client = client
 	}
 	return nil
 }
 
-func (c *Consumer) ackGhostIDs(stream string, ghostIDs ...string) error {
+func (c *ConsumerClient) ackGhostIDs(stream string, ghostIDs ...string) error {
 	for _, id := range ghostIDs {
-		reply, err := c.handle.XRange(stream, id, id).Result()
+		reply, err := c.client.XRange(stream, id, id).Result()
 		if err != nil {
 			if err != redis.Nil {
 				return err
@@ -300,7 +295,7 @@ func (c *Consumer) ackGhostIDs(stream string, ghostIDs ...string) error {
 		}
 
 		if len(reply) == 0 {
-			err = c.handle.XAck(stream, c.Group, id).Err()
+			err = c.client.XAck(stream, c.Group, id).Err()
 			if err != nil {
 				if err != redis.Nil {
 					return err

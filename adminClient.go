@@ -1,7 +1,6 @@
 package redis
 
 import (
-	"github.com/Bofry/lib-redis-stream/internal"
 	redis "github.com/go-redis/redis/v7"
 )
 
@@ -10,7 +9,7 @@ type AdminClient struct {
 }
 
 func NewAdminClient(opt *UniversalOptions) (*AdminClient, error) {
-	client, err := internal.CreateRedisUniversalClient(opt)
+	client, err := createRedisUniversalClient(opt)
 	if err != nil {
 		return nil, err
 	}

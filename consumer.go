@@ -1,32 +1,33 @@
 package redis
 
 import (
+	"fmt"
+	"log"
 	"sync"
 	"time"
 
-	"github.com/Bofry/lib-redis-stream/internal"
 	redis "github.com/go-redis/redis/v7"
 )
 
 type Consumer struct {
-	Group                   string
-	Name                    string
-	RedisOption             *redis.UniversalOptions
-	MaxInFlight             int64
-	MaxPollingTimeout       time.Duration
-	ClaimMinIdleTime        time.Duration
-	IdlingTimeout           time.Duration // 若沒有任何訊息時等待多久
-	ClaimSensitivity        int           // Read 時取得的訊息數小於 n 的話, 執行 Claim
-	ClaimOccurrenceRate     int32         // Read 每執行 n 次後 執行 Claim 1 次
-	MessageHandler          MessageHandleProc
-	UnhandledMessageHandler MessageHandleProc
-	ErrorHandler            RedisErrorHandleProc
+	Group               string
+	Name                string
+	RedisOption         *redis.UniversalOptions
+	MaxInFlight         int64
+	MaxPollingTimeout   time.Duration
+	ClaimMinIdleTime    time.Duration
+	IdlingTimeout       time.Duration // 若沒有任何訊息時等待多久
+	ClaimSensitivity    int           // Read 時取得的訊息數小於 n 的話, 執行 Claim
+	ClaimOccurrenceRate int32         // Read 每執行 n 次後 執行 Claim 1 次
+	MessageHandler      MessageHandleProc
+	ErrorHandler        ErrorHandleProc
+	Logger              *log.Logger
 
-	handle   *internal.Consumer
+	client   *ConsumerClient
 	stopChan chan bool
 	wg       sync.WaitGroup
 
-	claimTrigger *internal.CyclicCounter
+	claimTrigger *CyclicCounter
 
 	mutex       sync.Mutex
 	initialized bool
@@ -36,10 +37,10 @@ type Consumer struct {
 
 func (c *Consumer) Subscribe(streams ...StreamOffset) error {
 	if c.disposed {
-		logger.Panic("the Consumer has been disposed")
+		return fmt.Errorf("the Consumer has been disposed")
 	}
 	if c.running {
-		logger.Panic("the Consumer is running")
+		return fmt.Errorf("the Consumer is running")
 	}
 
 	var err error
@@ -60,35 +61,28 @@ func (c *Consumer) Subscribe(streams ...StreamOffset) error {
 
 	// new consumer
 	{
-		consumer := &internal.Consumer{
+		consumer := &ConsumerClient{
 			Group:       c.Group,
 			Name:        c.Name,
 			RedisOption: c.RedisOption,
 		}
 
-		err = consumer.Subscribe(streams...)
+		err = consumer.subscribe(streams...)
 		if err != nil {
 			return err
 		}
 
-		c.handle = consumer
+		c.client = consumer
 	}
 
 	// reset
-	c.claimTrigger.Reset()
-
-	var (
-		ctx = &ConsumeContext{
-			consumer:                c,
-			unhandledMessageHandler: c.UnhandledMessageHandler,
-		}
-	)
+	c.claimTrigger.reset()
 
 	go func() {
 		c.wg.Add(1)
 		defer c.wg.Done()
 
-		defer c.handle.Close()
+		defer c.client.close()
 
 		for {
 			select {
@@ -96,10 +90,10 @@ func (c *Consumer) Subscribe(streams ...StreamOffset) error {
 				return
 
 			default:
-				err := c.processMessage(ctx)
+				err := c.processMessage(c.client)
 				if err != nil {
 					if !c.processRedisError(err) {
-						logger.Fatalf("%% Error: %v\n", err)
+						c.Logger.Fatalf("%% Error: %v\n", err)
 						return
 					}
 				}
@@ -140,7 +134,11 @@ func (c *Consumer) init() {
 	}
 
 	if c.claimTrigger == nil {
-		c.claimTrigger = internal.NewCyclicCounter(c.ClaimOccurrenceRate)
+		c.claimTrigger = newCyclicCounter(c.ClaimOccurrenceRate)
+	}
+
+	if c.Logger == nil {
+		c.Logger = defaultLogger
 	}
 	c.initialized = true
 }
@@ -153,17 +151,17 @@ func (c *Consumer) processRedisError(err error) (disposed bool) {
 }
 
 func (c *Consumer) getRedisClient() redis.UniversalClient {
-	return c.handle.Handle()
+	return c.client.client
 }
 
-func (c *Consumer) processMessage(ctx *ConsumeContext) error {
+func (c *Consumer) processMessage(client *ConsumerClient) error {
 	var (
 		readMessages int = 0
 	)
 
 	// perform XREADGROUP
 	{
-		streams, err := c.handle.Read(c.MaxInFlight, c.MaxPollingTimeout)
+		streams, err := c.client.read(c.MaxInFlight, c.MaxPollingTimeout)
 		if err != nil {
 			if err != redis.Nil {
 				return err
@@ -173,7 +171,14 @@ func (c *Consumer) processMessage(ctx *ConsumeContext) error {
 		if len(streams) > 0 {
 			for _, stream := range streams {
 				for _, message := range stream.Messages {
-					c.MessageHandler(ctx, stream.Stream, &message)
+					msg := Message{
+						XMessage:      &message,
+						ConsumerGroup: c.Group,
+						Stream:        stream.Stream,
+						client:        client,
+					}
+
+					c.MessageHandler(&msg)
 					readMessages++
 				}
 			}
@@ -181,13 +186,13 @@ func (c *Consumer) processMessage(ctx *ConsumeContext) error {
 	}
 
 	// perform XAUTOCLAIM
-	if c.claimTrigger.Spin() || readMessages < c.ClaimSensitivity {
+	if c.claimTrigger.spin() || readMessages < c.ClaimSensitivity {
 		// fmt.Println("***CLAIM")
 		var (
 			pendingFetchingSize = c.computePendingFetchingSize(c.MaxInFlight)
 		)
 
-		streams, err := c.handle.Claim(c.ClaimMinIdleTime, c.MaxInFlight, pendingFetchingSize)
+		streams, err := c.client.claim(c.ClaimMinIdleTime, c.MaxInFlight, pendingFetchingSize)
 		if err != nil {
 			if err != redis.Nil {
 				return err
@@ -196,7 +201,14 @@ func (c *Consumer) processMessage(ctx *ConsumeContext) error {
 		if len(streams) > 0 {
 			for _, stream := range streams {
 				for _, message := range stream.Messages {
-					c.MessageHandler(ctx, stream.Stream, &message)
+					msg := Message{
+						XMessage:      &message,
+						ConsumerGroup: c.Group,
+						Stream:        stream.Stream,
+						client:        client,
+					}
+
+					c.MessageHandler(&msg)
 				}
 			}
 			return nil

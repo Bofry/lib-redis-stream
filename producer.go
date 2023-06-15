@@ -2,25 +2,28 @@ package redis
 
 import (
 	"fmt"
+	"log"
 	"sync"
 
-	"github.com/Bofry/lib-redis-stream/internal"
 	redis "github.com/go-redis/redis/v7"
 )
 
 type Producer struct {
 	handle redis.UniversalClient
 
-	wg       sync.WaitGroup
-	mutex    sync.Mutex
-	disposed bool
+	logger *log.Logger
+
+	wg          sync.WaitGroup
+	mutex       sync.Mutex
+	disposed    bool
+	initialized bool
 }
 
-func NewProducer(opt *UniversalOptions) (*Producer, error) {
+func NewProducer(config *ProducerConfig) (*Producer, error) {
 	instance := &Producer{}
 
 	var err error
-	err = instance.init(opt)
+	err = instance.init(config)
 	if err != nil {
 		return nil, err
 	}
@@ -31,9 +34,33 @@ func (p *Producer) Handle() redis.UniversalClient {
 	return p.handle
 }
 
-func (p *Producer) Write(stream string, id string, content map[string]interface{}) (string, error) {
+func (p *Producer) WriteContent(stream string, id string, msg *MessageContent, opts ...ProduceMessageContentOption) (string, error) {
 	if p.disposed {
 		return "", fmt.Errorf("the Producer has been disposed")
+	}
+	if !p.initialized {
+		p.logger.Panic("the Producer haven't be initialized yet")
+	}
+
+	// apply options
+	for _, opt := range opts {
+		err := opt.apply(msg)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	var values map[string]interface{}
+	msg.WriteTo(values)
+	return p.Write(stream, id, values)
+}
+
+func (p *Producer) Write(stream string, id string, values map[string]interface{}) (string, error) {
+	if p.disposed {
+		return "", fmt.Errorf("the Producer has been disposed")
+	}
+	if !p.initialized {
+		p.logger.Panic("the Producer haven't be initialized yet")
 	}
 
 	p.wg.Add(1)
@@ -42,7 +69,7 @@ func (p *Producer) Write(stream string, id string, content map[string]interface{
 	reply, err := p.handle.XAdd(&redis.XAddArgs{
 		Stream: stream,
 		ID:     id,
-		Values: content,
+		Values: values,
 	}).Result()
 	if err != nil {
 		if err != redis.Nil {
@@ -66,11 +93,30 @@ func (p *Producer) Close() {
 	p.handle.Close()
 }
 
-func (p *Producer) init(opt *UniversalOptions) error {
-	client, err := internal.CreateRedisUniversalClient(opt)
+func (p *Producer) init(config *ProducerConfig) error {
+	if p.initialized {
+		return nil
+	}
+
+	client, err := createRedisUniversalClient(config.UniversalOptions)
 	if err != nil {
 		return err
 	}
+
+	// config logger
+	p.configureLogger(config)
+
 	p.handle = client
+
+	p.initialized = true
+
 	return nil
+}
+
+func (p *Producer) configureLogger(config *ProducerConfig) {
+	if config.Logger != nil {
+		p.logger = config.Logger
+		return
+	}
+	p.logger = defaultLogger
 }

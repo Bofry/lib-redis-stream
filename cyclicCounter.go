@@ -1,4 +1,4 @@
-package internal
+package redis
 
 import "sync/atomic"
 
@@ -8,14 +8,14 @@ type CyclicCounter struct {
 	value int32
 }
 
-func NewCyclicCounter(max int32) *CyclicCounter {
+func newCyclicCounter(max int32) *CyclicCounter {
 	return &CyclicCounter{
 		max:   max,
 		value: 0,
 	}
 }
 
-func (w *CyclicCounter) Spin() (refreshed bool) {
+func (w *CyclicCounter) spin() (refreshed bool) {
 	if w.max == 0 {
 		return false
 	}
@@ -24,6 +24,6 @@ func (w *CyclicCounter) Spin() (refreshed bool) {
 	return atomic.CompareAndSwapInt32(&w.value, w.max, 0)
 }
 
-func (w *CyclicCounter) Reset() {
+func (w *CyclicCounter) reset() {
 	atomic.StoreInt32(&w.value, 0)
 }

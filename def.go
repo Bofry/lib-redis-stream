@@ -4,28 +4,27 @@ import (
 	"log"
 	"os"
 
-	"github.com/Bofry/lib-redis-stream/internal"
 	redis "github.com/go-redis/redis/v7"
 )
 
 const (
-	StreamAsteriskID           string = internal.StreamAsteriskID
-	StreamLastDeliveredID      string = internal.StreamLastDeliveredID
-	StreamZeroID               string = internal.StreamZeroID
-	StreamZeroOffset           string = internal.StreamZeroOffset
-	StreamNeverDeliveredOffset string = internal.StreamNeverDeliveredOffset
+	StreamAsteriskID           string = "*"
+	StreamLastDeliveredID      string = "$"
+	StreamZeroID               string = "0"
+	StreamZeroOffset           string = "0"
+	StreamNeverDeliveredOffset string = ">"
 
 	Nil = redis.Nil
 
 	LOGGER_PREFIX string = "[lib-redis-stream] "
 
-	MAX_PENDING_FETCHING_SIZE         int64 = 512
+	MAX_PENDING_FETCHING_SIZE         int64 = 4096
 	MIN_PENDING_FETCHING_SIZE         int64 = 16
 	PENDING_FETCHING_SIZE_COEFFICIENT int64 = 3
 )
 
 var (
-	logger *log.Logger = log.New(os.Stdout, LOGGER_PREFIX, log.LstdFlags|log.Lmsgprefix)
+	defaultLogger *log.Logger = log.New(os.Stdout, LOGGER_PREFIX, log.LstdFlags|log.Lmsgprefix)
 )
 
 type (
@@ -34,11 +33,17 @@ type (
 	XMessage         = redis.XMessage
 	XStream          = redis.XStream
 
-	StreamOffset = internal.StreamOffset
+	ProduceMessageContentOption interface {
+		apply(msg *MessageContent) error
+	}
 )
 
 // func
 type (
-	RedisErrorHandleProc func(err error) (disposed bool)
-	MessageHandleProc    func(ctx *ConsumeContext, stream string, message *XMessage)
+	ErrorHandleProc   func(err error) (disposed bool)
+	MessageHandleProc func(message *Message)
 )
+
+func DefaultLogger() *log.Logger {
+	return defaultLogger
+}

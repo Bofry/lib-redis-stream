@@ -1,4 +1,4 @@
-package internal
+package redis
 
 type StreamOffset struct {
 	Stream string

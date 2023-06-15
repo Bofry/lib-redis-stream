@@ -1,4 +1,4 @@
-package internal
+package redis
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	redis "github.com/go-redis/redis/v7"
 )
 
-func CreateRedisUniversalClient(opt *UniversalOptions) (UniversalClient, error) {
+func createRedisUniversalClient(opt *UniversalOptions) (UniversalClient, error) {
 	client := redis.NewUniversalClient(opt)
 	if client == nil {
 		return nil, fmt.Errorf("fail to create redis.Client")
@@ -21,8 +21,8 @@ func CreateRedisUniversalClient(opt *UniversalOptions) (UniversalClient, error) 
 	return client, nil
 }
 
-func Assert(ok bool, message string) {
-	if !ok {
-		panic(message)
+func assertCompatibility(condition bool, message string) {
+	if !condition {
+		panic(fmt.Sprintf("unsupported Redis version. %s", message))
 	}
 }
