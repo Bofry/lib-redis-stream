@@ -80,8 +80,6 @@ func (p *Producer) Write(stream string, values map[string]interface{}, opts ...P
 		}
 	}
 
-	fmt.Printf("ID: %s\n", id)
-
 	return p.internalWrite(stream, id, values)
 }
 
