@@ -261,7 +261,7 @@ func TestProducer_Write(t *testing.T) {
 				time.Sleep(500 * time.Millisecond)
 				msgCnt++
 			},
-			ErrorHandler: func(err error) (disposed bool) {
+			RedisErrorHandler: func(err error) (disposed bool) {
 				t.Fatal(err)
 				return true
 			},

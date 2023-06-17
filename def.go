@@ -46,8 +46,8 @@ type (
 
 // func
 type (
-	ErrorHandleProc   func(err error) (disposed bool)
-	MessageHandleProc func(message *Message)
+	RedisErrorHandleProc func(err error) (disposed bool)
+	MessageHandleProc    func(message *Message)
 )
 
 func DefaultLogger() *log.Logger {

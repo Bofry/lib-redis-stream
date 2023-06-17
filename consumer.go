@@ -20,7 +20,7 @@ type Consumer struct {
 	ClaimSensitivity    int           // Read 時取得的訊息數小於 n 的話, 執行 Claim
 	ClaimOccurrenceRate int32         // Read 每執行 n 次後 執行 Claim 1 次
 	MessageHandler      MessageHandleProc
-	ErrorHandler        ErrorHandleProc
+	RedisErrorHandler   RedisErrorHandleProc
 	Logger              *log.Logger
 
 	client   *ConsumerClient
@@ -144,8 +144,8 @@ func (c *Consumer) init() {
 }
 
 func (c *Consumer) processRedisError(err error) (disposed bool) {
-	if c.ErrorHandler != nil {
-		return c.ErrorHandler(err)
+	if c.RedisErrorHandler != nil {
+		return c.RedisErrorHandler(err)
 	}
 	return false
 }

@@ -112,7 +112,7 @@ func Example() {
 				message.Ack()
 				message.Del()
 			},
-			ErrorHandler: func(err error) (disposed bool) {
+			RedisErrorHandler: func(err error) (disposed bool) {
 				fmt.Println(err)
 				return true
 			},
