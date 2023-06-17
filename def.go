@@ -13,6 +13,7 @@ const (
 	StreamZeroID               string = "0"
 	StreamZeroOffset           string = "0"
 	StreamNeverDeliveredOffset string = ">"
+	StreamUnspecifiedOffset    string = ""
 
 	Nil = redis.Nil
 
@@ -36,6 +37,10 @@ type (
 	ProduceMessageOption interface {
 		applyContent(msg *MessageContent) error
 		applyID(id string) string
+	}
+
+	StreamOffsetInfo interface {
+		getStreamOffset() StreamOffset
 	}
 )
 

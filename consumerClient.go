@@ -24,7 +24,7 @@ type ConsumerClient struct {
 	disposed bool
 }
 
-func (c *ConsumerClient) subscribe(streams ...StreamOffset) error {
+func (c *ConsumerClient) subscribe(streams ...StreamOffsetInfo) error {
 	if len(streams) == 0 {
 		return fmt.Errorf("specified streams is empty")
 	}
@@ -60,15 +60,16 @@ func (c *ConsumerClient) subscribe(streams ...StreamOffset) error {
 	if size > 0 {
 		for i := 0; i < size; i++ {
 			s := streams[i]
-			keys = append(keys, s.Stream)
+			keys = append(keys, s.getStreamOffset().Stream)
 		}
 		keyOffsets = append(keyOffsets, keys...)
 		for i := 0; i < size; i++ {
 			s := streams[i]
-			if len(s.Offset) == 0 {
+			if len(s.getStreamOffset().Offset) == 0 {
+				// when unspecified offset
 				keyOffsets = append(keyOffsets, StreamNeverDeliveredOffset)
 			} else {
-				keyOffsets = append(keyOffsets, s.Offset)
+				keyOffsets = append(keyOffsets, s.getStreamOffset().Offset)
 			}
 		}
 		c.streamKeys = keys

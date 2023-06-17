@@ -119,7 +119,7 @@ func Example() {
 		}
 
 		err := c.Subscribe(
-			redis.FromStreamNeverDeliveredOffset("gotestStream"),
+			redis.Stream("gotestStream"),
 		)
 		if err != nil {
 			panic(err)

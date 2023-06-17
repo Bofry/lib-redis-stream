@@ -268,8 +268,8 @@ func TestProducer_Write(t *testing.T) {
 		}
 
 		err := c.Subscribe(
-			redis.FromStreamNeverDeliveredOffset("TestProducer_Write_1"),
-			redis.FromStreamNeverDeliveredOffset("TestProducer_Write_2"),
+			redis.Stream("TestProducer_Write_1"),
+			redis.Stream("TestProducer_Write_2"),
 		)
 		if err != nil {
 			t.Fatal(err)
