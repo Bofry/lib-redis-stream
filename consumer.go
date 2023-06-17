@@ -145,7 +145,10 @@ func (c *Consumer) init() {
 
 func (c *Consumer) processRedisError(err error) (disposed bool) {
 	if c.RedisErrorHandler != nil {
-		return c.RedisErrorHandler(err)
+		consumerErr := &ConsumerError{
+			err: err,
+		}
+		return c.RedisErrorHandler(consumerErr)
 	}
 	return false
 }
