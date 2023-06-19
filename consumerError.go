@@ -19,8 +19,6 @@ func (e *ConsumerError) Unwrap() error {
 }
 
 func (e *ConsumerError) IsRedisError() bool {
-	return isRedisError(e.err)
+	_, ok := e.err.(RedisError)
+	return ok
 }
-
-//go:linkname isRedisError github.com/go-redis/redis/v7/internal/proto.isRedisError
-func isRedisError(err error) bool

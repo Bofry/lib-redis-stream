@@ -47,6 +47,10 @@ type (
 		OnAck(msg *Message)
 		OnDel(msg *Message)
 	}
+
+	RedisError interface {
+		RedisError()
+	}
 )
 
 // func
