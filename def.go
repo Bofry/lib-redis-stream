@@ -42,6 +42,11 @@ type (
 	StreamOffsetInfo interface {
 		getStreamOffset() StreamOffset
 	}
+
+	MessageDelegate interface {
+		OnAck(msg *Message)
+		OnDel(msg *Message)
+	}
 )
 
 // func

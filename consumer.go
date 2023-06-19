@@ -174,14 +174,7 @@ func (c *Consumer) processMessage(client *ConsumerClient) error {
 		if len(streams) > 0 {
 			for _, stream := range streams {
 				for _, message := range stream.Messages {
-					msg := Message{
-						XMessage:      &message,
-						ConsumerGroup: c.Group,
-						Stream:        stream.Stream,
-						client:        client,
-					}
-
-					c.MessageHandler(&msg)
+					c.handleMessage(client, stream.Stream, &message)
 					readMessages++
 				}
 			}
@@ -204,14 +197,7 @@ func (c *Consumer) processMessage(client *ConsumerClient) error {
 		if len(streams) > 0 {
 			for _, stream := range streams {
 				for _, message := range stream.Messages {
-					msg := Message{
-						XMessage:      &message,
-						ConsumerGroup: c.Group,
-						Stream:        stream.Stream,
-						client:        client,
-					}
-
-					c.MessageHandler(&msg)
+					c.handleMessage(client, stream.Stream, &message)
 				}
 			}
 			return nil
@@ -236,4 +222,44 @@ func (c *Consumer) computePendingFetchingSize(maxInFlight int64) int64 {
 		return MAX_PENDING_FETCHING_SIZE
 	}
 	return fetchingSize
+}
+
+func (c *Consumer) handleMessage(client *ConsumerClient, stream string, m *redis.XMessage) {
+	msg := Message{
+		XMessage:      m,
+		ConsumerGroup: c.Group,
+		Stream:        stream,
+		Delegate:      &clientMessageDelegate{client: c},
+		client:        client,
+	}
+
+	c.MessageHandler(&msg)
+}
+
+func (c *Consumer) doAck(m *Message) {
+	if c.disposed {
+		return
+	}
+	if !c.running {
+		return
+	}
+
+	_, err := c.client.ack(m.Stream, m.ID)
+	if err != nil {
+		c.Logger.Printf("error sending command XACK '%s' '%s' '%s'", m.Stream, c.Group, m.ID)
+	}
+}
+
+func (c *Consumer) doDel(m *Message) {
+	if c.disposed {
+		return
+	}
+	if !c.running {
+		return
+	}
+
+	_, err := c.client.del(m.Stream, m.ID)
+	if err != nil {
+		c.Logger.Printf("error sending command XACK '%s' '%s'", m.Stream, m.ID)
+	}
 }
