@@ -12,6 +12,7 @@ type Message struct {
 	client *ConsumerClient
 
 	responded int32
+	killed    int32
 }
 
 func (m *Message) Ack() {
@@ -22,14 +23,15 @@ func (m *Message) Ack() {
 }
 
 func (m *Message) Del() {
-	if !atomic.CompareAndSwapInt32(&m.responded, 0, 1) {
+	if !atomic.CompareAndSwapInt32(&m.killed, 0, 1) {
 		return
 	}
 	m.Delegate.OnDel(m)
 }
 
 func (m *Message) HasResponded() bool {
-	return atomic.LoadInt32(&m.responded) == 1
+	return atomic.LoadInt32(&m.responded) == 1 ||
+		atomic.LoadInt32(&m.killed) == 1
 }
 
 func (m *Message) Content() *MessageContent {
