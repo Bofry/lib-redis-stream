@@ -86,3 +86,38 @@ func TestMessage(t *testing.T) {
 		}
 	}
 }
+
+func TestMessage_Clone(t *testing.T) {
+	d := new(mockMessageDelegate)
+
+	m := Message{
+		ConsumerGroup: "go-test-channel",
+		Stream:        "goTestStream",
+		Delegate:      d,
+		XMessage: &redis.XMessage{
+			ID: "1000",
+			Values: map[string]interface{}{
+				"foo": "bar",
+			},
+		},
+	}
+
+	cloned := m.Clone()
+
+	var expectedConsumerGroup string = m.ConsumerGroup
+	if expectedConsumerGroup != cloned.ConsumerGroup {
+		t.Errorf("cloned.ConsumerGroup expect:: %v, got:: %v\n", expectedConsumerGroup, cloned.ConsumerGroup)
+	}
+	var expectedStream string = m.Stream
+	if expectedStream != cloned.Stream {
+		t.Errorf("cloned.Stream expect:: %v, got:: %v\n", expectedStream, cloned.Stream)
+	}
+	var expectedDelegate MessageDelegate = m.Delegate
+	if expectedDelegate != cloned.Delegate {
+		t.Errorf("cloned.Delegate expect:: %v, got:: %v\n", expectedDelegate, cloned.Delegate)
+	}
+	var expectedXMessage *XMessage = m.XMessage
+	if expectedXMessage != cloned.XMessage {
+		t.Errorf("cloned.XMessage expect:: %v, got:: %v\n", expectedXMessage, cloned.XMessage)
+	}
+}
