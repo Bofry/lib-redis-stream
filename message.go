@@ -9,8 +9,6 @@ type Message struct {
 	Stream        string
 	Delegate      MessageDelegate
 
-	client *ConsumerClient
-
 	responded int32
 	killed    int32
 }

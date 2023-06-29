@@ -90,7 +90,7 @@ func (c *Consumer) Subscribe(streams ...StreamOffsetInfo) error {
 				return
 
 			default:
-				err := c.processMessage(c.client)
+				err := c.processMessage()
 				if err != nil {
 					if !c.processRedisError(err) {
 						c.Logger.Fatalf("%% Error: %v\n", err)
@@ -157,7 +157,7 @@ func (c *Consumer) getRedisClient() redis.UniversalClient {
 	return c.client.client
 }
 
-func (c *Consumer) processMessage(client *ConsumerClient) error {
+func (c *Consumer) processMessage() error {
 	var (
 		readMessages int = 0
 	)
@@ -174,7 +174,7 @@ func (c *Consumer) processMessage(client *ConsumerClient) error {
 		if len(streams) > 0 {
 			for _, stream := range streams {
 				for _, message := range stream.Messages {
-					c.handleMessage(client, stream.Stream, &message)
+					c.handleMessage(stream.Stream, &message)
 					readMessages++
 				}
 			}
@@ -197,7 +197,7 @@ func (c *Consumer) processMessage(client *ConsumerClient) error {
 		if len(streams) > 0 {
 			for _, stream := range streams {
 				for _, message := range stream.Messages {
-					c.handleMessage(client, stream.Stream, &message)
+					c.handleMessage(stream.Stream, &message)
 				}
 			}
 			return nil
@@ -224,13 +224,12 @@ func (c *Consumer) computePendingFetchingSize(maxInFlight int64) int64 {
 	return fetchingSize
 }
 
-func (c *Consumer) handleMessage(client *ConsumerClient, stream string, m *redis.XMessage) {
+func (c *Consumer) handleMessage(stream string, m *redis.XMessage) {
 	msg := Message{
 		XMessage:      m,
 		ConsumerGroup: c.Group,
 		Stream:        stream,
 		Delegate:      &clientMessageDelegate{client: c},
-		client:        client,
 	}
 
 	c.MessageHandler(&msg)
