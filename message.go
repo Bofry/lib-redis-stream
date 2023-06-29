@@ -41,3 +41,14 @@ func (m *Message) Content() *MessageContent {
 		Values: m.Values,
 	}
 }
+
+func (m *Message) Clone() *Message {
+	return &Message{
+		XMessage:      m.XMessage,
+		ConsumerGroup: m.ConsumerGroup,
+		Stream:        m.Stream,
+		Delegate:      m.Delegate,
+		responded:     m.responded,
+		killed:        m.killed,
+	}
+}
