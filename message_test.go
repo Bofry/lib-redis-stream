@@ -90,7 +90,7 @@ func TestMessage(t *testing.T) {
 func TestMessage_Clone(t *testing.T) {
 	d := new(mockMessageDelegate)
 
-	m := Message{
+	m := &Message{
 		ConsumerGroup: "go-test-channel",
 		Stream:        "goTestStream",
 		Delegate:      d,
@@ -104,6 +104,9 @@ func TestMessage_Clone(t *testing.T) {
 
 	cloned := m.Clone()
 
+	if m == cloned {
+		t.Errorf("cloned Message should different then self\n")
+	}
 	var expectedConsumerGroup string = m.ConsumerGroup
 	if expectedConsumerGroup != cloned.ConsumerGroup {
 		t.Errorf("cloned.ConsumerGroup expect:: %v, got:: %v\n", expectedConsumerGroup, cloned.ConsumerGroup)

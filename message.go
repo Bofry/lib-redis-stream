@@ -1,6 +1,8 @@
 package redis
 
-import "sync/atomic"
+import (
+	"sync/atomic"
+)
 
 type Message struct {
 	*XMessage
@@ -43,12 +45,6 @@ func (m *Message) Content() *MessageContent {
 }
 
 func (m *Message) Clone() *Message {
-	return &Message{
-		XMessage:      m.XMessage,
-		ConsumerGroup: m.ConsumerGroup,
-		Stream:        m.Stream,
-		Delegate:      m.Delegate,
-		responded:     m.responded,
-		killed:        m.killed,
-	}
+	cloned := *m
+	return &cloned
 }
