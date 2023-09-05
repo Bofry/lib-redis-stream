@@ -23,8 +23,12 @@ func (c *MessageContent) WriteTo(container map[string]interface{}) {
 		panic("call MessageContent.WriteTo() use a nil container")
 	}
 
+	if c.State.contentKeyPrefix == "" {
+		c.State.contentKeyPrefix = _DefaultMessageStateKeyPrefix
+	}
+
 	c.State.Visit(func(name string, value interface{}) {
-		var key = _DefaultMessageStateKeyPrefix + name
+		var key = c.State.contentKeyPrefix + name
 		container[key] = value
 	})
 
@@ -53,13 +57,17 @@ func DecodeMessageContent(container map[string]interface{}, opts ...DecodeMessag
 		opt.apply(setting)
 	}
 
+	content.State.contentKeyPrefix = setting.MessageStateKeyPrefix
+
 	for k, v := range container {
-		key, ok := strings.CutPrefix(k, setting.MessageStateKeyPrefix)
-		if ok {
-			content.State.Set(key, v)
-		} else {
-			values[key] = v
+		if len(setting.MessageStateKeyPrefix) > 0 {
+			key, ok := strings.CutPrefix(k, content.State.contentKeyPrefix)
+			if ok {
+				content.State.Set(key, v)
+				continue
+			}
 		}
+		values[k] = v
 	}
 
 	content.Values = values

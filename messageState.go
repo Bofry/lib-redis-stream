@@ -15,8 +15,9 @@ const (
 var _ tracing.MessageState = new(MessageState)
 
 type MessageState struct {
-	noCopy noCopy
-	values map[string]interface{}
+	noCopy           noCopy
+	contentKeyPrefix string
+	values           map[string]interface{}
 }
 
 func (s *MessageState) Len() int {
