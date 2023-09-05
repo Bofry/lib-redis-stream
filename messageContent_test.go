@@ -75,6 +75,46 @@ func TestDecodeMessageContent_Well(t *testing.T) {
 	}
 }
 
+func TestDecodeMessageContent_WithMessageStateKeyPrefix(t *testing.T) {
+	container := map[string]interface{}{
+		"mystate:foo": "bar",
+		"one":         "eins",
+		"two":         "zwei",
+		"three":       "drei",
+	}
+
+	content := DecodeMessageContent(container,
+		WithMessageStateKeyPrefix("mystate:"))
+
+	{
+		if content == nil {
+			t.Fatalf("MessageContent should not nil")
+		}
+	}
+	{
+		var state map[string]interface{} = make(map[string]interface{})
+		content.State.Visit(func(name string, value interface{}) {
+			state[name] = value
+		})
+		expectedState := map[string]interface{}{
+			"foo": "bar",
+		}
+		if !reflect.DeepEqual(expectedState, state) {
+			t.Errorf("MessageContent.State() expected: %v, got: %v", expectedState, state)
+		}
+	}
+	{
+		expectedValues := map[string]interface{}{
+			"one":   "eins",
+			"two":   "zwei",
+			"three": "drei",
+		}
+		if !reflect.DeepEqual(expectedValues, content.Values) {
+			t.Errorf("MessageContent.Values expected: %v, got: %v", expectedValues, content.Values)
+		}
+	}
+}
+
 func TestDecodeMessageContent_Nil(t *testing.T) {
 	var container map[string]interface{} = nil
 

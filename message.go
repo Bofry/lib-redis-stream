@@ -34,8 +34,8 @@ func (m *Message) HasResponded() bool {
 		atomic.LoadInt32(&m.killed) == 1
 }
 
-func (m *Message) Content() *MessageContent {
-	content := DecodeMessageContent(m.Values)
+func (m *Message) Content(opts ...DecodeMessageContentOption) *MessageContent {
+	content := DecodeMessageContent(m.Values, opts...)
 	if content != nil {
 		return content
 	}

@@ -3,7 +3,7 @@ package redis
 import "strings"
 
 const (
-	_MessageStateKeyPrefix = "header:"
+	_DefaultMessageStateKeyPrefix = "header:"
 )
 
 type MessageContent struct {
@@ -24,7 +24,7 @@ func (c *MessageContent) WriteTo(container map[string]interface{}) {
 	}
 
 	c.State.Visit(func(name string, value interface{}) {
-		var key = _MessageStateKeyPrefix + name
+		var key = _DefaultMessageStateKeyPrefix + name
 		container[key] = value
 	})
 
@@ -33,7 +33,7 @@ func (c *MessageContent) WriteTo(container map[string]interface{}) {
 	}
 }
 
-func DecodeMessageContent(container map[string]interface{}) *MessageContent {
+func DecodeMessageContent(container map[string]interface{}, opts ...DecodeMessageContentOption) *MessageContent {
 	var (
 		content MessageContent = MessageContent{}
 		values  map[string]interface{}
@@ -45,8 +45,16 @@ func DecodeMessageContent(container map[string]interface{}) *MessageContent {
 
 	values = make(map[string]interface{})
 
+	var setting = &DecodeMessageContentSetting{
+		MessageStateKeyPrefix: _DefaultMessageStateKeyPrefix,
+	}
+
+	for _, opt := range opts {
+		opt.apply(setting)
+	}
+
 	for k, v := range container {
-		key, ok := strings.CutPrefix(k, _MessageStateKeyPrefix)
+		key, ok := strings.CutPrefix(k, setting.MessageStateKeyPrefix)
 		if ok {
 			content.State.Set(key, v)
 		} else {
