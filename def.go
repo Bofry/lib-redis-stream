@@ -22,8 +22,6 @@ const (
 	MAX_PENDING_FETCHING_SIZE         int64 = 4096
 	MIN_PENDING_FETCHING_SIZE         int64 = 16
 	PENDING_FETCHING_SIZE_COEFFICIENT int64 = 3
-
-	NoopDecodeMessageContentOption = noopDecodeMessageContentOption(0)
 )
 
 var (

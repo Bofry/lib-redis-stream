@@ -9,15 +9,6 @@ func (fn DecodeMessageContentOptionFunc) apply(setting *DecodeMessageContentSett
 }
 
 // ------------------------------
-var _ DecodeMessageContentOption = noopDecodeMessageContentOption(0)
-
-type noopDecodeMessageContentOption int
-
-// apply implements DecodeMessageContentOption.
-func (noopDecodeMessageContentOption) apply(*DecodeMessageContentSetting) {
-}
-
-// ------------------------------
 func WithMessageStateKeyPrefix(prefix string) DecodeMessageContentOption {
 	return DecodeMessageContentOptionFunc(func(setting *DecodeMessageContentSetting) {
 		setting.MessageStateKeyPrefix = prefix
