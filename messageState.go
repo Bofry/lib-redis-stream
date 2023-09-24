@@ -48,7 +48,7 @@ func (s *MessageState) Del(name string) interface{} {
 	return nil
 }
 
-func (s *MessageState) SetString(name string, value interface{}) (old interface{}, err error) {
+func (s *MessageState) SetString(name, value string) (old interface{}, err error) {
 	return s.Set(name, value)
 }
 
