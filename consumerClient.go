@@ -315,7 +315,9 @@ func (c *ConsumerClient) ackGhostIDs(stream string, ghostIDs ...string) error {
 
 func (c *ConsumerClient) pause(streams ...string) error {
 	for _, s := range streams {
-		c.streamKeyState[s] = false
+		if _, ok := c.streamKeyState[s]; ok {
+			c.streamKeyState[s] = false
+		}
 	}
 	c.updateStreamKeyOffset()
 	return nil
@@ -323,7 +325,9 @@ func (c *ConsumerClient) pause(streams ...string) error {
 
 func (c *ConsumerClient) resume(streams ...string) error {
 	for _, s := range streams {
-		c.streamKeyState[s] = true
+		if _, ok := c.streamKeyState[s]; ok {
+			c.streamKeyState[s] = true
+		}
 	}
 	c.updateStreamKeyOffset()
 	return nil
