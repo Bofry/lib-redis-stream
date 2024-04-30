@@ -124,6 +124,14 @@ func (c *Consumer) Close() {
 	c.wg.Wait()
 }
 
+func (c *Consumer) Pause(streams ...string) error {
+	return c.client.pause(streams...)
+}
+
+func (c *Consumer) Resume(streams ...string) error {
+	return c.client.resume(streams...)
+}
+
 func (c *Consumer) init() {
 	if c.initialized {
 		return

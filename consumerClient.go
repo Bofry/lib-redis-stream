@@ -16,6 +16,8 @@ type ConsumerClient struct {
 	client UniversalClient
 	wg     sync.WaitGroup
 
+	streams          []StreamOffsetInfo
+	streamKeyState   map[string]bool
 	streamKeys       []string
 	streamKeyOffsets []string
 
@@ -36,9 +38,9 @@ func (c *ConsumerClient) subscribe(streams ...StreamOffsetInfo) error {
 	}
 
 	var (
-		size       = len(streams)
-		keys       = make([]string, 0, size)
-		keyOffsets = make([]string, 0, size*2)
+		size     = len(streams)
+		keyState = make(map[string]bool)
+		keys     = make([]string, 0, size)
 	)
 
 	var err error
@@ -60,21 +62,16 @@ func (c *ConsumerClient) subscribe(streams ...StreamOffsetInfo) error {
 	if size > 0 {
 		for i := 0; i < size; i++ {
 			s := streams[i]
-			keys = append(keys, s.getStreamOffset().Stream)
+			k := s.getStreamOffset().Stream
+			keyState[k] = true
+			keys = append(keys, k)
 		}
-		keyOffsets = append(keyOffsets, keys...)
-		for i := 0; i < size; i++ {
-			s := streams[i]
-			if len(s.getStreamOffset().Offset) == 0 {
-				// when unspecified offset
-				keyOffsets = append(keyOffsets, StreamNeverDeliveredOffset)
-			} else {
-				keyOffsets = append(keyOffsets, s.getStreamOffset().Offset)
-			}
-		}
-		c.streamKeys = keys
-		c.streamKeyOffsets = keyOffsets
 	}
+	c.streams = streams
+	c.streamKeys = keys
+	c.streamKeyState = keyState
+	c.updateStreamKeyOffset()
+
 	return nil
 }
 
@@ -91,6 +88,10 @@ func (c *ConsumerClient) claim(minIdleTime time.Duration, count int64, pendingFe
 
 	var resultStream []redis.XStream = make([]redis.XStream, 0, len(c.streamKeys))
 	for _, stream := range c.streamKeys {
+		if !c.isConnected(stream) {
+			continue
+		}
+
 		// fetch all pending messages from specified redis stream key
 		pendingSet, err := c.client.XPendingExt(&redis.XPendingExtArgs{
 			Stream: stream,
@@ -199,6 +200,11 @@ func (c *ConsumerClient) read(count int64, timeout time.Duration) ([]redis.XStre
 		return nil, fmt.Errorf("the Consumer is not running")
 	}
 
+	// return nil if unset stream offset
+	if len(c.streamKeyOffsets) == 0 {
+		return nil, nil
+	}
+
 	c.wg.Add(1)
 	defer c.wg.Done()
 
@@ -305,4 +311,59 @@ func (c *ConsumerClient) ackGhostIDs(stream string, ghostIDs ...string) error {
 		}
 	}
 	return nil
+}
+
+func (c *ConsumerClient) pause(streams ...string) error {
+	for _, s := range streams {
+		c.streamKeyState[s] = false
+	}
+	c.updateStreamKeyOffset()
+	return nil
+}
+
+func (c *ConsumerClient) resume(streams ...string) error {
+	for _, s := range streams {
+		c.streamKeyState[s] = true
+	}
+	c.updateStreamKeyOffset()
+	return nil
+}
+
+func (c *ConsumerClient) isConnected(stream string) bool {
+	if v, ok := c.streamKeyState[stream]; ok {
+		return v
+	}
+	c.updateStreamKeyOffset()
+	return false
+}
+
+func (c *ConsumerClient) updateStreamKeyOffset() {
+	var (
+		size       = len(c.streams)
+		streams    = c.streams
+		keys       = make([]string, 0, size)
+		keyOffsets = make([]string, 0, size*2)
+	)
+	if size > 0 {
+		for i := 0; i < size; i++ {
+			s := streams[i]
+			k := s.getStreamOffset().Stream
+			if c.isConnected(k) {
+				keys = append(keys, k)
+			}
+		}
+		keyOffsets = append(keyOffsets, keys...)
+		for i := 0; i < size; i++ {
+			s := streams[i]
+			k := s.getStreamOffset().Stream
+			if c.isConnected(k) {
+				offset := StreamNeverDeliveredOffset
+				if len(s.getStreamOffset().Offset) > 0 {
+					offset = s.getStreamOffset().Offset
+				}
+				keyOffsets = append(keyOffsets, offset)
+			}
+		}
+	}
+	c.streamKeyOffsets = keyOffsets
 }
