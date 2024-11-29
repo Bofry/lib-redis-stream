@@ -16,8 +16,9 @@ type ConsumerClient struct {
 	client UniversalClient
 	wg     sync.WaitGroup
 
-	streams          []StreamOffsetInfo
-	streamKeyState   map[string]bool
+	streams []StreamOffsetInfo
+	// streamKeyState   map[string]bool
+	streamKeyState   *sync.Map
 	streamKeys       []string
 	streamKeyOffsets []string
 
@@ -38,8 +39,9 @@ func (c *ConsumerClient) subscribe(streams ...StreamOffsetInfo) error {
 	}
 
 	var (
-		size     = len(streams)
-		keyState = make(map[string]bool)
+		size = len(streams)
+		// keyState = make(map[string]bool)
+		keyState = new(sync.Map)
 		keys     = make([]string, 0, size)
 	)
 
@@ -63,7 +65,7 @@ func (c *ConsumerClient) subscribe(streams ...StreamOffsetInfo) error {
 		for i := 0; i < size; i++ {
 			s := streams[i]
 			k := s.getStreamOffset().Stream
-			keyState[k] = true
+			keyState.Store(k, true)
 			keys = append(keys, k)
 		}
 	}
@@ -315,8 +317,11 @@ func (c *ConsumerClient) ackGhostIDs(stream string, ghostIDs ...string) error {
 
 func (c *ConsumerClient) pause(streams ...string) error {
 	for _, s := range streams {
-		if _, ok := c.streamKeyState[s]; ok {
-			c.streamKeyState[s] = false
+		// if _, ok := c.streamKeyState[s]; ok {
+		// 	c.streamKeyState[s] = false
+		// }
+		if _, ok := c.streamKeyState.Load(s); ok {
+			c.streamKeyState.Store(s, false)
 		}
 	}
 	c.updateStreamKeyOffset()
@@ -325,8 +330,11 @@ func (c *ConsumerClient) pause(streams ...string) error {
 
 func (c *ConsumerClient) resume(streams ...string) error {
 	for _, s := range streams {
-		if _, ok := c.streamKeyState[s]; ok {
-			c.streamKeyState[s] = true
+		// if _, ok := c.streamKeyState[s]; ok {
+		// 	c.streamKeyState[s] = true
+		// }
+		if _, ok := c.streamKeyState.Load(s); ok {
+			c.streamKeyState.Store(s, true)
 		}
 	}
 	c.updateStreamKeyOffset()
@@ -334,8 +342,11 @@ func (c *ConsumerClient) resume(streams ...string) error {
 }
 
 func (c *ConsumerClient) isConnected(stream string) bool {
-	if v, ok := c.streamKeyState[stream]; ok {
-		return v
+	// if v, ok := c.streamKeyState[stream]; ok {
+	// 	return v
+	// }
+	if v, ok := c.streamKeyState.Load(stream); ok {
+		return v.(bool)
 	}
 	c.updateStreamKeyOffset()
 	return false
