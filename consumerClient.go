@@ -8,7 +8,7 @@ import (
 	redis "github.com/go-redis/redis/v7"
 )
 
-type ConsumerClient struct {
+type consumerClient struct {
 	Group       string
 	Name        string
 	RedisOption *redis.UniversalOptions
@@ -27,7 +27,7 @@ type ConsumerClient struct {
 	disposed bool
 }
 
-func (c *ConsumerClient) subscribe(streams ...StreamOffsetInfo) error {
+func (c *consumerClient) subscribe(streams ...StreamOffsetInfo) error {
 	if len(streams) == 0 {
 		return fmt.Errorf("specified streams is empty")
 	}
@@ -77,7 +77,7 @@ func (c *ConsumerClient) subscribe(streams ...StreamOffsetInfo) error {
 	return nil
 }
 
-func (c *ConsumerClient) claim(minIdleTime time.Duration, count int64, pendingFetchingSize int64) ([]redis.XStream, error) {
+func (c *consumerClient) claim(minIdleTime time.Duration, count int64, pendingFetchingSize int64) ([]redis.XStream, error) {
 	if c.disposed {
 		return nil, fmt.Errorf("the Consumer has been disposed")
 	}
@@ -194,7 +194,7 @@ func (c *ConsumerClient) claim(minIdleTime time.Duration, count int64, pendingFe
 	return resultStream, nil
 }
 
-func (c *ConsumerClient) read(count int64, timeout time.Duration) ([]redis.XStream, error) {
+func (c *consumerClient) read(count int64, timeout time.Duration) ([]redis.XStream, error) {
 	if c.disposed {
 		return nil, fmt.Errorf("the Consumer has been disposed")
 	}
@@ -225,7 +225,7 @@ func (c *ConsumerClient) read(count int64, timeout time.Duration) ([]redis.XStre
 	return messages, nil
 }
 
-func (c *ConsumerClient) ack(key string, id ...string) (int64, error) {
+func (c *consumerClient) ack(key string, id ...string) (int64, error) {
 	if c.disposed {
 		return 0, fmt.Errorf("the Consumer has been disposed")
 	}
@@ -245,7 +245,7 @@ func (c *ConsumerClient) ack(key string, id ...string) (int64, error) {
 	return reply, nil
 }
 
-func (c *ConsumerClient) del(key string, id ...string) (int64, error) {
+func (c *consumerClient) del(key string, id ...string) (int64, error) {
 	if c.disposed {
 		return 0, fmt.Errorf("the Consumer has been disposed")
 	}
@@ -265,7 +265,7 @@ func (c *ConsumerClient) del(key string, id ...string) (int64, error) {
 	return reply, nil
 }
 
-func (c *ConsumerClient) close() {
+func (c *consumerClient) close() {
 	if c.disposed {
 		return
 	}
@@ -282,7 +282,7 @@ func (c *ConsumerClient) close() {
 	c.client.Close()
 }
 
-func (c *ConsumerClient) configRedisClient() error {
+func (c *consumerClient) configRedisClient() error {
 	if c.client == nil {
 		client, err := createRedisUniversalClient(c.RedisOption)
 		if err != nil {
@@ -294,7 +294,7 @@ func (c *ConsumerClient) configRedisClient() error {
 	return nil
 }
 
-func (c *ConsumerClient) ackGhostIDs(stream string, ghostIDs ...string) error {
+func (c *consumerClient) ackGhostIDs(stream string, ghostIDs ...string) error {
 	for _, id := range ghostIDs {
 		reply, err := c.client.XRange(stream, id, id).Result()
 		if err != nil {
@@ -315,7 +315,7 @@ func (c *ConsumerClient) ackGhostIDs(stream string, ghostIDs ...string) error {
 	return nil
 }
 
-func (c *ConsumerClient) pause(streams ...string) error {
+func (c *consumerClient) pause(streams ...string) error {
 	for _, s := range streams {
 		// if _, ok := c.streamKeyState[s]; ok {
 		// 	c.streamKeyState[s] = false
@@ -328,7 +328,7 @@ func (c *ConsumerClient) pause(streams ...string) error {
 	return nil
 }
 
-func (c *ConsumerClient) resume(streams ...string) error {
+func (c *consumerClient) resume(streams ...string) error {
 	for _, s := range streams {
 		// if _, ok := c.streamKeyState[s]; ok {
 		// 	c.streamKeyState[s] = true
@@ -341,7 +341,7 @@ func (c *ConsumerClient) resume(streams ...string) error {
 	return nil
 }
 
-func (c *ConsumerClient) isConnected(stream string) bool {
+func (c *consumerClient) isConnected(stream string) bool {
 	// if v, ok := c.streamKeyState[stream]; ok {
 	// 	return v
 	// }
@@ -352,7 +352,7 @@ func (c *ConsumerClient) isConnected(stream string) bool {
 	return false
 }
 
-func (c *ConsumerClient) updateStreamKeyOffset() {
+func (c *consumerClient) updateStreamKeyOffset() {
 	var (
 		size       = len(c.streams)
 		streams    = c.streams

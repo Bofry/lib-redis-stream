@@ -1,6 +1,6 @@
 package redis
 
-var _ StreamOffset = StreamOffset{}
+var _ StreamOffsetInfo = StreamOffset{}
 
 type StreamOffset struct {
 	Stream string

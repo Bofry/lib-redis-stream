@@ -139,7 +139,7 @@ func TestConsumerClient_Read(t *testing.T) {
 		DB:    0,
 	}
 
-	c := &ConsumerClient{
+	c := &consumerClient{
 		Group:       "gotestGroup",
 		Name:        "gotestConsumer",
 		RedisOption: &opt,
@@ -261,7 +261,7 @@ func TestConsumerClient_Claim(t *testing.T) {
 		DB:    0,
 	}
 
-	c := &ConsumerClient{
+	c := &consumerClient{
 		Group:       "gotestGroup",
 		Name:        "gotestConsumer",
 		RedisOption: &opt,
@@ -368,7 +368,7 @@ func TestConsumerClient_Read_WithPause(t *testing.T) {
 		DB:    0,
 	}
 
-	c := &ConsumerClient{
+	c := &consumerClient{
 		Group:       "gotestGroup",
 		Name:        "gotestConsumer",
 		RedisOption: &opt,
@@ -495,7 +495,7 @@ func TestConsumerClient_Claim_WithPause(t *testing.T) {
 		DB:    0,
 	}
 
-	c := &ConsumerClient{
+	c := &consumerClient{
 		Group:       "gotestGroup",
 		Name:        "gotestConsumer",
 		RedisOption: &opt,
@@ -607,7 +607,7 @@ func TestConsumerClient_Read_WithPauseAll(t *testing.T) {
 		DB:    0,
 	}
 
-	c := &ConsumerClient{
+	c := &consumerClient{
 		Group:       "gotestGroup",
 		Name:        "gotestConsumer",
 		RedisOption: &opt,
@@ -734,7 +734,7 @@ func TestConsumerClient_Claim_WithPauseAll(t *testing.T) {
 		DB:    0,
 	}
 
-	c := &ConsumerClient{
+	c := &consumerClient{
 		Group:       "gotestGroup",
 		Name:        "gotestConsumer",
 		RedisOption: &opt,
@@ -846,7 +846,7 @@ func TestConsumerClient_Read_WithPauseAndResume(t *testing.T) {
 		DB:    0,
 	}
 
-	c := &ConsumerClient{
+	c := &consumerClient{
 		Group:       "gotestGroup",
 		Name:        "gotestConsumer",
 		RedisOption: &opt,
@@ -977,7 +977,7 @@ func TestConsumerClient_Claim_WithPauseAndResume(t *testing.T) {
 		DB:    0,
 	}
 
-	c := &ConsumerClient{
+	c := &consumerClient{
 		Group:       "gotestGroup",
 		Name:        "gotestConsumer",
 		RedisOption: &opt,

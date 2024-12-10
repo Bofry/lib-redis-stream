@@ -23,7 +23,7 @@ type Consumer struct {
 	RedisErrorHandler   RedisErrorHandleProc
 	Logger              *log.Logger
 
-	client   *ConsumerClient
+	client   *consumerClient
 	stopChan chan bool
 	wg       sync.WaitGroup
 
@@ -61,7 +61,7 @@ func (c *Consumer) Subscribe(streams ...StreamOffsetInfo) error {
 
 	// new consumer
 	{
-		consumer := &ConsumerClient{
+		consumer := &consumerClient{
 			Group:       c.Group,
 			Name:        c.Name,
 			RedisOption: c.RedisOption,
@@ -78,10 +78,9 @@ func (c *Consumer) Subscribe(streams ...StreamOffsetInfo) error {
 	// reset
 	c.claimTrigger.reset()
 
+	c.wg.Add(1)
 	go func() {
-		c.wg.Add(1)
 		defer c.wg.Done()
-
 		defer c.client.close()
 
 		for {
