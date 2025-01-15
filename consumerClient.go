@@ -39,8 +39,7 @@ func (c *consumerClient) subscribe(streams ...StreamOffsetInfo) error {
 	}
 
 	var (
-		size = len(streams)
-		// keyState = make(map[string]bool)
+		size     = len(streams)
 		keyState = new(sync.Map)
 		keys     = make([]string, 0, size)
 	)

@@ -20,7 +20,7 @@ type Consumer struct {
 	ClaimSensitivity    int           // Read 時取得的訊息數小於 n 的話, 執行 Claim
 	ClaimOccurrenceRate int32         // Read 每執行 n 次後 執行 Claim 1 次
 	MessageHandler      MessageHandleProc
-	RedisErrorHandler   RedisErrorHandleProc
+	ErrorHandler        ErrorHandleProc
 	Logger              *log.Logger
 
 	client   *consumerClient
@@ -91,7 +91,7 @@ func (c *Consumer) Subscribe(streams ...StreamOffsetInfo) error {
 			default:
 				err := c.processMessage()
 				if err != nil {
-					if !c.processRedisError(err) {
+					if !c.processError(err) {
 						c.Logger.Fatalf("%% Error: %v\n", err)
 						return
 					}
@@ -150,18 +150,14 @@ func (c *Consumer) init() {
 	c.initialized = true
 }
 
-func (c *Consumer) processRedisError(err error) (disposed bool) {
-	if c.RedisErrorHandler != nil {
+func (c *Consumer) processError(err error) (disposed bool) {
+	if c.ErrorHandler != nil {
 		consumerErr := &ConsumerError{
 			err: err,
 		}
-		return c.RedisErrorHandler(consumerErr)
+		return c.ErrorHandler(consumerErr)
 	}
 	return false
-}
-
-func (c *Consumer) getRedisClient() redis.UniversalClient {
-	return c.client.client
 }
 
 func (c *Consumer) processMessage() error {
