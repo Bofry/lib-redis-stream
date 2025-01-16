@@ -16,16 +16,10 @@ type Message struct {
 }
 
 func (m *Message) Ack() {
-	if !atomic.CompareAndSwapInt32(&m.responded, 0, 1) {
-		return
-	}
 	m.Delegate.OnAck(m)
 }
 
 func (m *Message) Del() {
-	if !atomic.CompareAndSwapInt32(&m.killed, 0, 1) {
-		return
-	}
 	m.Delegate.OnDel(m)
 }
 
@@ -47,4 +41,12 @@ func (m *Message) Content(opts ...DecodeMessageContentOption) *MessageContent {
 func (m *Message) Clone() *Message {
 	cloned := *m
 	return &cloned
+}
+
+func (m *Message) canAck() bool {
+	return atomic.CompareAndSwapInt32(&m.responded, 0, 1)
+}
+
+func (m *Message) canDel() bool {
+	return atomic.CompareAndSwapInt32(&m.killed, 0, 1)
 }

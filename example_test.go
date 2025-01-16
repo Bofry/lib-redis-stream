@@ -21,7 +21,7 @@ func Example() {
 	// register consumer group
 	{
 		admin, err := redis.NewAdminClient(&redis.UniversalOptions{
-			Addrs: __TEST_REDIS_SERVERS,
+			Addrs: EVN_REDIS_SERVERS,
 			DB:    0,
 		})
 		if err != nil {
@@ -29,6 +29,12 @@ func Example() {
 		}
 		defer func() {
 			defer admin.Close()
+
+			count, err := admin.Handle().XLen("gotestStream").Result()
+			if err != nil {
+				panic(err)
+			}
+			fmt.Printf("Retained messages: %d\n", count)
 
 			/*
 				XGROUP DESTROY gotestStream gotestGroup
@@ -60,7 +66,7 @@ func Example() {
 	{
 		conf := redis.ProducerConfig{
 			UniversalOptions: &redis.UniversalOptions{
-				Addrs: __TEST_REDIS_SERVERS,
+				Addrs: EVN_REDIS_SERVERS,
 				DB:    0,
 			},
 		}
@@ -72,14 +78,17 @@ func Example() {
 
 		// produce message
 		{
-			publishMessages := []map[string]interface{}{
-				{"name": "luffy", "age": 19},
-				{"name": "nami", "age": 21},
-				{"name": "zoro", "age": 21},
+			publishMessages := []struct {
+				id     string
+				values map[string]interface{}
+			}{
+				{id: "4567-0", values: map[string]interface{}{"name": "luffy", "age": 19}},
+				{id: "4567-1", values: map[string]interface{}{"name": "nami", "age": 21}},
+				{id: "4567-2", values: map[string]interface{}{"name": "zoro", "age": 21}},
 			}
 
 			for _, message := range publishMessages {
-				reply, err := p.Write("gotestStream", message)
+				reply, err := p.Write("gotestStream", message.values, redis.WithMessageID(message.id))
 				if err != nil {
 					panic(err)
 				}
@@ -93,7 +102,7 @@ func Example() {
 	{
 		// the config only for test use !!
 		opt := redis.UniversalOptions{
-			Addrs: __TEST_REDIS_SERVERS,
+			Addrs: EVN_REDIS_SERVERS,
 			DB:    0,
 		}
 
@@ -133,4 +142,13 @@ func Example() {
 			break
 		}
 	}
+
+	// Output:
+	// ID: 4567-0
+	// ID: 4567-1
+	// ID: 4567-2
+	// Message on gotestStream: &{4567-0 map[age:19 name:luffy]}
+	// Message on gotestStream: &{4567-1 map[age:21 name:nami]}
+	// Message on gotestStream: &{4567-2 map[age:21 name:zoro]}
+	// Retained messages: 0
 }
