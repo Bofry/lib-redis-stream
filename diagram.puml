@@ -1,0 +1,20 @@
+@startuml Redis Stream Consuming Flow
+
+start
+
+repeat
+  :pull messages;
+  :increase `count`;
+  if (should run CLAIM command pulling all pending messages?) then (yes)
+    if () then (ClaimOccurrenceRate % count == 0)
+    else (messages <= ClaimSensitivity)
+    endif
+    :claim messages;
+  else (no)
+  endif
+:process messages;
+repeatwhile (<b>continue?) is (yes) not (no)
+stop
+
+@enduml
+

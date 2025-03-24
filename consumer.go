@@ -185,7 +185,7 @@ func (c *Consumer) processMessage() error {
 	}
 
 	// perform XAUTOCLAIM
-	if c.claimTrigger.spin() || readMessages < c.ClaimSensitivity {
+	if c.claimTrigger.spin() || readMessages <= c.ClaimSensitivity {
 		// fmt.Println("***CLAIM")
 		var (
 			pendingFetchingSize = c.computePendingFetchingSize(c.MaxInFlight)

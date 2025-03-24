@@ -19,6 +19,9 @@ func (w *CyclicCounter) spin() (refreshed bool) {
 	if w.max == 0 {
 		return false
 	}
+	if w.max == 1 {
+		return true
+	}
 
 	atomic.AddInt32(&w.value, 1)
 	return atomic.CompareAndSwapInt32(&w.value, w.max, 0)
