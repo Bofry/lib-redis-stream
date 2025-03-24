@@ -1,6 +1,8 @@
 .vscode
 .env
 
+out/
+
 # local environment shell script
 env.bat
 env.sh
