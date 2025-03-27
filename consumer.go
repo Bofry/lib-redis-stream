@@ -22,6 +22,7 @@ type Consumer struct {
 	MessageHandler      MessageHandleProc
 	ErrorHandler        ErrorHandleProc
 	Logger              *log.Logger
+	StreamFilter        StreamFilterProc
 
 	client   *consumerClient
 	stopChan chan bool
@@ -228,14 +229,24 @@ func (c *Consumer) computePendingFetchingSize(maxInFlight int64) int64 {
 }
 
 func (c *Consumer) handleMessage(stream string, m *redis.XMessage) {
-	msg := Message{
+	if c.MessageHandler == nil {
+		return
+	}
+
+	msg := &Message{
 		XMessage:      m,
 		ConsumerGroup: c.Group,
 		Stream:        stream,
 		Delegate:      &clientMessageDelegate{client: c},
 	}
 
-	c.MessageHandler(&msg)
+	if c.StreamFilter != nil {
+		if !c.StreamFilter(msg) {
+			return
+		}
+	}
+
+	c.MessageHandler(msg)
 }
 
 func (c *Consumer) doAck(m *Message) {

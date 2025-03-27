@@ -3,28 +3,28 @@ package redis
 import "sync/atomic"
 
 type CyclicCounter struct {
-	max int32
+	ubound int32
 
 	value int32
 }
 
-func newCyclicCounter(max int32) *CyclicCounter {
+func newCyclicCounter(count int32) *CyclicCounter {
 	return &CyclicCounter{
-		max:   max,
-		value: 0,
+		ubound: count,
+		value:  0,
 	}
 }
 
 func (w *CyclicCounter) spin() (refreshed bool) {
-	if w.max == 0 {
+	if w.ubound == 0 {
 		return false
 	}
-	if w.max == 1 {
+	if w.ubound == 1 {
 		return true
 	}
 
 	atomic.AddInt32(&w.value, 1)
-	return atomic.CompareAndSwapInt32(&w.value, w.max, 0)
+	return atomic.CompareAndSwapInt32(&w.value, w.ubound, 0)
 }
 
 func (w *CyclicCounter) reset() {

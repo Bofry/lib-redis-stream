@@ -10,7 +10,7 @@ func TestStream(t *testing.T) {
 		if expectedStream != streamOffset.Stream {
 			t.Errorf("StreamOffset.Stream expected:: %v, got:: %v", expectedStream, streamOffset.Stream)
 		}
-		var expectedOffset string = StreamNeverDeliveredOffset
+		var expectedOffset ConsumerOffset = StreamNeverDeliveredOffset
 		if expectedOffset != streamOffset.Offset {
 			t.Errorf("StreamOffset.Offset expected:: %v, got:: %v", expectedOffset, streamOffset.Offset)
 		}
@@ -22,7 +22,7 @@ func TestStream(t *testing.T) {
 		if expectedStream != streamOffset.Stream {
 			t.Errorf("StreamOffset.Stream expected:: %v, got:: %v", expectedStream, streamOffset.Stream)
 		}
-		var expectedOffset string = StreamZeroOffset
+		var expectedOffset ConsumerOffset = StreamZeroOffset
 		if expectedOffset != streamOffset.Offset {
 			t.Errorf("StreamOffset.Offset expected:: %v, got:: %v", expectedOffset, streamOffset.Offset)
 		}
@@ -34,7 +34,7 @@ func TestStream(t *testing.T) {
 		if expectedStream != streamOffset.Stream {
 			t.Errorf("StreamOffset.Stream expected:: %v, got:: %v", expectedStream, streamOffset.Stream)
 		}
-		var expectedOffset string = "1000"
+		var expectedOffset ConsumerOffset = "1000"
 		if expectedOffset != streamOffset.Offset {
 			t.Errorf("StreamOffset.Offset expected:: %v, got:: %v", expectedOffset, streamOffset.Offset)
 		}

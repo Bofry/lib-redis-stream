@@ -16,8 +16,7 @@ type consumerClient struct {
 	client UniversalClient
 	wg     sync.WaitGroup
 
-	streams []StreamOffsetInfo
-	// streamKeyState   map[string]bool
+	streams          []StreamOffsetInfo
 	streamKeyState   *sync.Map
 	streamKeys       []string
 	streamKeyOffsets []string
@@ -264,6 +263,26 @@ func (c *consumerClient) del(key string, id ...string) (int64, error) {
 	return reply, nil
 }
 
+func (c *consumerClient) pause(streams ...string) error {
+	for _, s := range streams {
+		if _, ok := c.streamKeyState.Load(s); ok {
+			c.streamKeyState.Store(s, false)
+		}
+	}
+	c.updateStreamKeyOffset()
+	return nil
+}
+
+func (c *consumerClient) resume(streams ...string) error {
+	for _, s := range streams {
+		if _, ok := c.streamKeyState.Load(s); ok {
+			c.streamKeyState.Store(s, true)
+		}
+	}
+	c.updateStreamKeyOffset()
+	return nil
+}
+
 func (c *consumerClient) close() {
 	if c.disposed {
 		return
@@ -314,36 +333,7 @@ func (c *consumerClient) ackGhostIDs(stream string, ghostIDs ...string) error {
 	return nil
 }
 
-func (c *consumerClient) pause(streams ...string) error {
-	for _, s := range streams {
-		// if _, ok := c.streamKeyState[s]; ok {
-		// 	c.streamKeyState[s] = false
-		// }
-		if _, ok := c.streamKeyState.Load(s); ok {
-			c.streamKeyState.Store(s, false)
-		}
-	}
-	c.updateStreamKeyOffset()
-	return nil
-}
-
-func (c *consumerClient) resume(streams ...string) error {
-	for _, s := range streams {
-		// if _, ok := c.streamKeyState[s]; ok {
-		// 	c.streamKeyState[s] = true
-		// }
-		if _, ok := c.streamKeyState.Load(s); ok {
-			c.streamKeyState.Store(s, true)
-		}
-	}
-	c.updateStreamKeyOffset()
-	return nil
-}
-
 func (c *consumerClient) isConnected(stream string) bool {
-	// if v, ok := c.streamKeyState[stream]; ok {
-	// 	return v
-	// }
 	if v, ok := c.streamKeyState.Load(stream); ok {
 		return v.(bool)
 	}
@@ -375,7 +365,7 @@ func (c *consumerClient) updateStreamKeyOffset() {
 				if len(s.getStreamOffset().Offset) > 0 {
 					offset = s.getStreamOffset().Offset
 				}
-				keyOffsets = append(keyOffsets, offset)
+				keyOffsets = append(keyOffsets, string(offset))
 			}
 		}
 	}

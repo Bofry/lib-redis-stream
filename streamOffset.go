@@ -4,7 +4,7 @@ var _ StreamOffsetInfo = StreamOffset{}
 
 type StreamOffset struct {
 	Stream string
-	Offset string
+	Offset ConsumerOffset
 }
 
 // getStreamOffset implements StreamOffsetInfo.

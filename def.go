@@ -8,12 +8,13 @@ import (
 )
 
 const (
-	StreamAsteriskID           string = "*"
-	StreamLastDeliveredID      string = "$"
-	StreamZeroID               string = "0"
-	StreamZeroOffset           string = "0"
-	StreamNeverDeliveredOffset string = ">"
-	StreamUnspecifiedOffset    string = ""
+	StreamAsteriskID      string = "*"
+	StreamLastDeliveredID string = "$"
+	StreamZeroID          string = "0"
+
+	StreamZeroOffset           ConsumerOffset = "0"
+	StreamNeverDeliveredOffset ConsumerOffset = ">"
+	StreamUnspecifiedOffset    ConsumerOffset = ""
 
 	Nil = redis.Nil
 
@@ -33,6 +34,8 @@ type (
 	UniversalClient  = redis.UniversalClient
 	XMessage         = redis.XMessage
 	XStream          = redis.XStream
+
+	ConsumerOffset string
 
 	ProduceMessageOption interface {
 		applyContent(msg *MessageContent) error
@@ -65,6 +68,7 @@ type (
 type (
 	ErrorHandleProc   func(err error) (disposed bool)
 	MessageHandleProc func(message *Message)
+	StreamFilterProc  func(message *Message) bool
 )
 
 func DefaultLogger() *log.Logger {

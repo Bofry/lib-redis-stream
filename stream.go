@@ -7,7 +7,7 @@ type Stream string
 func (s Stream) Offset(offset string) StreamOffset {
 	return StreamOffset{
 		Stream: string(s),
-		Offset: offset,
+		Offset: ConsumerOffset(offset),
 	}
 }
 
