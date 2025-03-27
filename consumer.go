@@ -20,9 +20,9 @@ type Consumer struct {
 	ClaimSensitivity    int           // Read 時取得的訊息數小於 n 的話, 執行 Claim
 	ClaimOccurrenceRate int32         // Read 每執行 n 次後 執行 Claim 1 次
 	MessageHandler      MessageHandleProc
+	MessageFilter       MessageFilterProc
 	ErrorHandler        ErrorHandleProc
 	Logger              *log.Logger
-	StreamFilter        StreamFilterProc
 
 	client   *consumerClient
 	stopChan chan bool
@@ -240,8 +240,8 @@ func (c *Consumer) handleMessage(stream string, m *redis.XMessage) {
 		Delegate:      &clientMessageDelegate{client: c},
 	}
 
-	if c.StreamFilter != nil {
-		if !c.StreamFilter(msg) {
+	if c.MessageFilter != nil {
+		if !c.MessageFilter(msg) {
 			return
 		}
 	}

@@ -112,7 +112,7 @@ func TestConsumer_Subscribe(t *testing.T) {
 	}
 }
 
-func TestConsumer_Subscribe_WithStreamFilter(t *testing.T) {
+func TestConsumer_Subscribe_WithMessageFilter(t *testing.T) {
 	{
 		/*
 			XGROUP CREATE gotestStream1 gotestGroup 0 MKSTREAM
@@ -193,7 +193,7 @@ func TestConsumer_Subscribe_WithStreamFilter(t *testing.T) {
 			message.Ack()
 			message.Del()
 		},
-		StreamFilter: func(message *Message) bool {
+		MessageFilter: func(message *Message) bool {
 			if message.Values != nil {
 				if message.Values["name"] == "luffy" {
 					log.Printf("[StreamFilter]:: Stream: %s, Message:%+v\n", message.Stream, message)

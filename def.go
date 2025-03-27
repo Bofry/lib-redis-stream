@@ -68,7 +68,7 @@ type (
 type (
 	ErrorHandleProc   func(err error) (disposed bool)
 	MessageHandleProc func(message *Message)
-	StreamFilterProc  func(message *Message) bool
+	MessageFilterProc func(message *Message) bool
 )
 
 func DefaultLogger() *log.Logger {
